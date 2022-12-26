@@ -6,18 +6,19 @@ from copy import deepcopy
 from dataclasses import dataclass, field, astuple
 from pathlib import Path
 
-file = Path('input.txt')
-with open(file, 'r') as f:
-    lines = f.readlines()
-
 Instruction = namedtuple('Instruction', ['direction', 'num'])
-instructions = []
-for line in lines:
-    direction, num = line.split()
-    instructions.append(Instruction(direction, int(num)))
 
 
 def main():
+    file = Path('input.txt')
+    with open(file, 'r') as f:
+        lines = f.readlines()
+
+    instructions = []
+    for line in lines:
+        direction, num = line.split()
+        instructions.append(Instruction(direction, int(num)))
+
     # Part 1:
     rope = Rope()
     for instruction in instructions:
@@ -45,8 +46,16 @@ class Rope:
     tail_log: list[Coord] = field(default_factory=lambda: [Coord(0, 0)])
 
     @property
-    def distance(self):
-        return ((self.H.x - self.T.x) ** 2 + (self.H.y - self.T.y) ** 2) ** (1 / 2)
+    def distance(self) -> float:
+        return (self.delta_x ** 2 + self.delta_y ** 2) ** (1 / 2)
+
+    @property
+    def delta_x(self) -> int:
+        return self.H.x - self.T.x
+
+    @property
+    def delta_y(self) -> int:
+        return self.H.y - self.T.y
 
     @staticmethod
     def new_tile_loc(old_tile: Coord, direction: str) -> Coord:
@@ -64,7 +73,7 @@ class Rope:
 
     def run_instr(self, instr: Instruction):
         for _ in range(instr.num):
-            self.move_head(self.new_tile_loc(self.H, instr.direction))
+            self.move_head(Rope.new_tile_loc(self.H, instr.direction))
             self.tail_follow()
 
     def move_head(self, new_tile):
@@ -73,14 +82,15 @@ class Rope:
 
     def tail_follow(self):
         if self.distance >= 2:
-            self.T = deepcopy(self.head_log[-2])
+            self.T.x += sign(self.delta_x)
+            self.T.y += sign(self.delta_y)
             self.log_tail()
 
     def log_head(self):
-        self.head_log.append(self.H)
+        self.head_log.append(deepcopy(self.H))
 
     def log_tail(self):
-        self.tail_log.append(self.T)
+        self.tail_log.append(deepcopy(self.T))
 
 
 @dataclass
@@ -102,6 +112,12 @@ class Chain:
                 rope.move_head(new_head)
                 rope.tail_follow()
                 last_tail = deepcopy(rope.T)
+
+
+def sign(x: int) -> int:
+    if x == 0:
+        return 0
+    return int(x / abs(x))
 
 
 if __name__ == '__main__':
